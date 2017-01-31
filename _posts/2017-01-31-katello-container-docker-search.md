@@ -57,6 +57,70 @@ ir_automated - boolean true/false if image created via automated build
 ir_official - boolean true/false if officially supported image
 ir_stars - integer number of user 'likes'
 ```
+Once the container is running, the following will initialize the database schema.
+
+```
+curl -X POST -H 'Content-type:application/json' http://localhost:8983/solr/katello_crane/schema --data-binary '{"add-field":{"name":"allTitle", "stored":true, "type":"string", "multiValued":false, "indexed":true}}'
+curl -X POST -H 'Content-type:application/json' http://localhost:8983/solr/katello_crane/schema --data-binary '{"add-field":{"name":"ir_description", "stored":true, "type":"string", "multiValued":false, "indexed":true}}'
+curl -X POST -H 'Content-type:application/json' http://localhost:8983/solr/katello_crane/schema --data-binary '{"add-field":{"name":"ir_automated", "stored":true, "type":"boolean", "multiValued":false, "indexed":true}}'
+curl -X POST -H 'Content-type:application/json' http://localhost:8983/solr/katello_crane/schema --data-binary '{"add-field":{"name":"ir_official", "stored":true, "type":"boolean", "multiValued":false, "indexed":true}}'
+curl -X POST -H 'Content-type:application/json' http://localhost:8983/solr/katello_crane/schema --data-binary '{"add-field":{"name":"ir_stars", "stored":true, "type":"long", "multiValued":false, "indexed":true}}'
+```
+
+For convenience, the following _Ansible_ script starts the _Solr_ container and configures it appropriately.
+
+```yaml
+# docker pull docker.io/solr:
+- name: Pull 'solr' container image
+  docker_image:
+    name: examplecorp-production-solrapp-dockerhub-solr
+    tag: 6.4.0
+# docker run --name solrcrane -d -p 8983:8983 -t solr
+- name: Start 'solr' container
+  docker_container:
+    name: solrcrane
+    image: solr:6.4.0
+    ports:
+      - "8983:8983"
+    tty: yes
+    state: started
+    command: bin/solr create_core -c solrcrane
+ name: Define schema
+  uri:
+    url: http://localhost:8983/solr/solrcrane/schema
+    method: POST
+    body: "{'add-field':{'name':'allTitle', 'stored':true, 'type':'string', 'multiValued':false, 'indexed':true}}"
+    body_format: json
+    HEADER_Content-Type: "application/json"
+- name: Define schema
+  uri:
+    url: http://localhost:8983/solr/solrcrane/schema
+    method: POST
+    body: "{'add-field':{'name':'ir_description', 'stored':true, 'type':'string', 'multiValued':false, 'indexed':true}}"
+    body_format: json
+    HEADER_Content-Type: "application/json"
+- name: Define schema
+  uri:
+    url: http://localhost:8983/solr/solrcrane/schema
+    method: POST
+    body: "{'add-field':{'name':'ir_automated', 'stored':true, 'type':'boolean', 'multiValued':false, 'indexed':true}}"
+    body_format: json
+    HEADER_Content-Type: "application/json"
+- name: Define schema
+  uri:
+    url: http://localhost:8983/solr/solrcrane/schema
+    method: POST
+    body: "{'add-field':{'name':'ir_official', 'stored':true, 'type':'boolean', 'multiValued':false, 'indexed':true}}"
+    body_format: json
+    HEADER_Content-Type: "application/json"
+- name: Define schema
+  uri:
+    url: http://localhost:8983/solr/solrcrane/schema
+    method: POST
+    body: "{'add-field':{'name':'ir_stars', 'stored':true, 'type':'long', 'multiValued':false, 'indexed':true}}"
+    body_format: json
+    HEADER_Content-Type: "application/json"
+```
 
 When a query from _docker search_ arrives, _Pulp_ will relay the call to the configured search service and then pass the results back to _docker search_. The configuration is of which search service is used is done in _/etc/crane.conf_.
 
