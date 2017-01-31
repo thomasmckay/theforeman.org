@@ -31,15 +31,34 @@ redhat.com    registry.access.redhat.com/openshift3/ose-docker-registry         
 
 ### Overview
 
-Pulp's Crane allows a couple of external search engines to be configured to process the _docker search_ calls. In this article the _Solr_ search engine will be used. _Solr_ is both simple to setup for basic uses but also capable of scaling to enterprise configurations.
+Pulp's Crane allows a couple of external search engines to be configured to process the _docker search_ calls. In this article the _Solr_ search engine will be used. _Solr_ is both simple to setup for basic usage while also being capable of scaling to enterprise configurations.
 
-A _Solr_ container will be started and configured. _Ansible_ is used for this on a _RHEL Atomic Host_. _Pulp's Crane_ configuration is then updated to use this as the _docker search_ service.
+The _Solr_ container will be run on a _RHEL Atomic Host_ via _Ansible_ for simplicity.
 
-Finally, a simple script will be written to pull container repository data from _Foreman_ to keep _Solr_ data up to date.
+Finally, a script is provided to pull container repository data from the _Foreman_ API to keep _Solr_ up to date with new content.
 
-### 
+### Running and configuring the _Solr_ Container
 
-When a query from _docker search_ arrives, _Pulp_ will relay the call to the configured search service and then pass the results back to _docker search_ for display. The configuration is of which search service is used is done in _/etc/crane.conf_.
+The instructions for starting a _Solr_ container are very well documented and even the basic instructions will suffice.
+
+From the _Solr_ image instructions, the following commands would start a container and initialize a core.
+
+```bash
+docker run --name solrcrane -d -p 8983:8983 -t solr
+docker exec -it --user solr solrcrane bin/solr create_core -c solrcrane
+```
+
+A key component of setting up the _Solr_ search service is defining the database schema necessary for _docker search_ results. _Crane_ expects several fields to be present in the JSON format query results.
+
+```
+allTitle - name of container image
+ir_description - description of image, free form
+ir_automated - boolean true/false if image created via automated build
+ir_official - boolean true/false if officially supported image
+ir_stars - integer number of user 'likes'
+```
+
+When a query from _docker search_ arrives, _Pulp_ will relay the call to the configured search service and then pass the results back to _docker search_. The configuration is of which search service is used is done in _/etc/crane.conf_.
 
 ```yaml
 # /etc/crane.conf
